@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语文作业打卡系统</title>
+    <link href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.staticfile.org/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --secondary-color: #10B981;
+        }
+        
+        body {
+            font-family: "Noto Sans SC", Tahoma, Arial, Roboto, "Droid Sans", "Helvetica Neue", "Droid Sans Fallback", "Heiti SC", "Hiragino Sans GB", Simsun, sans-serif;
+        }
+
+        .dark {
+            background-color: #1F2937;
+            color: #F3F4F6;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+        }
+
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .dark .card {
+            background: #374151;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 transition-colors duration-200">
+    <button class="theme-toggle p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+        <i class="fas fa-sun text-yellow-500 dark:hidden"></i>
+        <i class="fas fa-moon text-blue-300 hidden dark:block"></i>
+    </button>
+
+    <!-- 登录界面 -->
+    <div id="loginView" class="login-container">
+        <div class="card p-8 w-full max-w-md mx-4">
+            <h2 class="text-2xl font-bold mb-6 text-center">语文作业打卡系统</h2>
+            <div class="space-y-4">
+                <div class="flex justify-center space-x-4">
+                    <button class="btn-primary" onclick="showTeacherLogin()">
+                        <i class="fas fa-chalkboard-teacher mr-2"></i>教师登录
+                    </button>
+                    <button class="btn-primary" onclick="showStudentLogin()">
+                        <i class="fas fa-user-graduate mr-2"></i>学生登录
+                    </button>
+                </div>
+                
+                <!-- 教师登录表单 -->
+                <form id="teacherLoginForm" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">用户名</label>
+                        <input type="text" id="teacherUsername" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">密码</label>
+                        <input type="password" id="teacherPassword" class="w-full p-2 border rounded" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-full">登录</button>
+                </form>
+
+                <!-- 学生登录表单 -->
+                <form id="studentLoginForm" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">学生姓名</label>
+                        <input type="text" id="studentName" class="w-full p-2 border rounded" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-full">进入系统</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 教师界面 -->
+    <div id="teacherView" class="hidden">
+        <nav class="bg-white dark:bg-gray-800 shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-bold">教师管理系统</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span id="teacherName" class="mr-4"></span>
+                        <button onclick="logout()" class="btn-primary">
+                            <i class="fas fa-sign-out-alt mr-2"></i>退出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-12 gap-6">
+                <!-- 历史作业列表 -->
+                <div class="col-span-3">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-lg font-bold mb-4">历史作业</h3>
+                        <div class="space-y-2" id="teacherDateNav">
+                            <!-- 日期列表将通过JavaScript动态添加 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 作业编辑区域 -->
+                <div class="col-span-9">
+                    <div class="card p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold">作业管理</h3>
+                            <div class="text-sm text-gray-500" id="currentEditDate"></div>
+                        </div>
+                        <form id="questionForm" class="space-y-6">
+                            <!-- 阅读理解部分 -->
+                            <div class="border-b pb-6">
+                                <h4 class="text-md font-medium mb-4">阅读理解</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">文章内容</label>
+                                        <textarea id="readingArticle" class="w-full p-2 border rounded dark:bg-gray-700" rows="8" 
+                                            placeholder="请输入阅读文章内容..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">阅读理解题目</label>
+                                        <textarea id="readingQuestions" class="w-full p-2 border rounded dark:bg-gray-700" rows="6" 
+                                            placeholder="请输入阅读理解题目，每行一题，格式：题目 1：问题内容"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 基础知识部分 -->
+                            <div class="pt-4">
+                                <h4 class="text-md font-medium mb-4">基础知识</h4>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">基础知识题目</label>
+                                    <textarea id="basicQuestions" class="w-full p-2 border rounded dark:bg-gray-700" rows="6" 
+                                        placeholder="请输入基础知识题目，每行一题，格式：1.(2分) 题目内容"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- 答案部分 -->
+                            <div class="pt-4 border-t">
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-1">上传题目文件</label>
+                                    <input type="file" id="questionFile" accept=".txt" 
+                                        class="w-full p-2 border rounded dark:bg-gray-700"
+                                        onchange="handleFileUpload(this)">
+                                </div>
+                                <label class="block text-sm font-medium mb-1">答案内容</label>
+                                <textarea id="answerContent" class="w-full p-2 border rounded dark:bg-gray-700" rows="4" 
+                                    placeholder="请输入答案内容，格式：第1题：答案"></textarea>
+                            </div>
+
+                            <div id="detectedQuestions" class="space-y-4 mt-4 hidden">
+                                <h3 class="font-medium">检测到的题目和答案：</h3>
+                                <div id="questionsList" class="space-y-2"></div>
+                            </div>
+                            
+                            <div class="mt-4 flex justify-between">
+                                <button type="button" class="btn-primary" onclick="previewQuestions()">
+                                    <i class="fas fa-eye mr-2"></i>预览
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-save mr-2"></i>保存
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 学生界面 -->
+    <div id="studentView" class="hidden">
+        <nav class="bg-white dark:bg-gray-800 shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-bold">学生作业系统</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span id="currentStudentName" class="mr-4"></span>
+                        <button onclick="logout()" class="btn-primary">
+                            <i class="fas fa-sign-out-alt mr-2"></i>退出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-12 gap-6">
+                <!-- 日期导航栏 -->
+                <div class="col-span-3">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-lg font-bold mb-4">作业日历</h3>
+                        <div class="space-y-2" id="dateNav">
+                            <!-- 日期列表将通过JavaScript动态添加 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 主要内容区域 -->
+                <div class="col-span-9">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+                        <div class="p-6">
+                            <h3 class="text-lg font-bold mb-4" id="currentDateTitle">今日作业</h3>
+                            <div id="todayHomework" class="space-y-4">
+                                <!-- 作业内容将通过JavaScript动态添加 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 视图控制函数
+        function showTeacherLogin() {
+            document.getElementById('teacherLoginForm').classList.remove('hidden');
+            document.getElementById('studentLoginForm').classList.add('hidden');
+        }
+
+        function showStudentLogin() {
+            document.getElementById('studentLoginForm').classList.remove('hidden');
+            document.getElementById('teacherLoginForm').classList.add('hidden');
+        }
+
+        // 深色模式切换
+        const themeToggle = document.querySelector('.theme-toggle');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+        function setTheme(isDark) {
+            document.documentElement.classList.toggle('dark', isDark);
+            localStorage.setItem('dark-mode', isDark);
+        }
+
+        // 初始化主题
+        setTheme(localStorage.getItem('dark-mode') === 'true' || prefersDark.matches);
+
+        themeToggle.addEventListener('click', () => {
+            setTheme(!document.documentElement.classList.contains('dark'));
+        });
+
+        // 登录处理
+        document.getElementById('teacherLoginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('teacherUsername').value;
+            const password = document.getElementById('teacherPassword').value;
+
+            if (username === 'admin' && password === 'admin') {
+                document.getElementById('loginView').classList.add('hidden');
+                document.getElementById('teacherView').classList.remove('hidden');
+                document.getElementById('teacherName').textContent = username;
+                localStorage.setItem('userType', 'teacher');
+                localStorage.setItem('username', username);
+                loadTeacherDateNav();
+            } else {
+                alert('用户名或密码错误！');
+            }
+        });
+
+        document.getElementById('studentLoginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const studentName = document.getElementById('studentName').value;
+            
+            if (studentName.trim()) {
+                document.getElementById('loginView').classList.add('hidden');
+                document.getElementById('studentView').classList.remove('hidden');
+                document.getElementById('currentStudentName').textContent = studentName;
+                localStorage.setItem('userType', 'student');
+                localStorage.setItem('username', studentName);
+                loadDateNav();
+            }
+        });
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('userType');
+            localStorage.removeItem('username');
+            location.reload();
+        }
+
+        // 检查登录状态
+        window.addEventListener('load', () => {
+            const userType = localStorage.getItem('userType');
+            const username = localStorage.getItem('username');
+
+            if (userType === 'teacher') {
+                document.getElementById('loginView').classList.add('hidden');
+                document.getElementById('teacherView').classList.remove('hidden');
+                document.getElementById('teacherName').textContent = username;
+                loadTeacherDateNav();
+            } else if (userType === 'student') {
+                document.getElementById('loginView').classList.add('hidden');
+                document.getElementById('studentView').classList.remove('hidden');
+                document.getElementById('currentStudentName').textContent = username;
+                loadDateNav();
+            }
+        });
+
+        // 日期导航加载
+        function loadDateNav() {
+            const dateNav = document.getElementById('dateNav');
+            dateNav.innerHTML = '';
+            
+            const dates = Object.keys(localStorage)
+                .filter(key => key.match(/^\d{4}-\d{2}-\d{2}$/))
+                .sort((a, b) => new Date(b) - new Date(a));
+
+            dates.forEach(date => {
+                const button = document.createElement('button');
+                button.className = 'w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
+                button.textContent = date;
+                button.onclick = () => loadHomework(date);
+                dateNav.appendChild(button);
+            });
+
+            if (dates.length > 0) {
+                loadHomework(dates[0]);
+            }
+        }
+
+        // 教师日期导航加载
+        function loadTeacherDateNav() {
+            const dateNav = document.getElementById('teacherDateNav');
+            dateNav.innerHTML = '';
+            
+            // 添加今日作业按钮
+            const today = new Date().toISOString().split('T')[0];
+            const todayButton = document.createElement('button');
+            todayButton.className = 'w-full text-left p-2 bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 rounded mb-4';
+            todayButton.innerHTML = `<i class="fas fa-calendar-day mr-2"></i>今日作业 (${today})`;
+            todayButton.onclick = () => loadTeacherHomework(today);
+            dateNav.appendChild(todayButton);
+
+            // 添加分隔线
+            const divider = document.createElement('div');
+            divider.className = 'border-t border-gray-200 dark:border-gray-700 my-4';
+            dateNav.appendChild(divider);
+            
+            // 历史作业列表
+            const dates = Object.keys(localStorage)
+                .filter(key => key.match(/^\d{4}-\d{2}-\d{2}$/))
+                .sort((a, b) => new Date(b) - new Date(a));
+
+            dates.forEach(date => {
+                if (date === today) return; // 跳过今天的日期
+                const button = document.createElement('button');
+                button.className = 'w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
+                button.textContent = date;
+                button.onclick = () => loadTeacherHomework(date);
+                dateNav.appendChild(button);
+            });
+
+            // 默认加载今日作业
+            loadTeacherHomework(today);
+        }
+
+        // 加载作业内容
+        function loadHomework(date) {
+            const homework = JSON.parse(localStorage.getItem(date) || '{}');
+            document.getElementById('currentDateTitle').textContent = `${date} 作业`;
+            
+            const container = document.getElementById('todayHomework');
+            container.innerHTML = generateHomeworkHtml(homework, date);
+        }
+
+        // 加载教师作业内容
+        function loadTeacherHomework(date) {
+            const homework = JSON.parse(localStorage.getItem(date) || '{}');
+            document.getElementById('currentEditDate').textContent = date;
+            
+            document.getElementById('readingArticle').value = homework.article || '';
+            document.getElementById('readingQuestions').value = homework.readingQuestions || '';
+            document.getElementById('basicQuestions').value = homework.basicQuestions || '';
+            document.getElementById('answerContent').value = homework.answers || '';
+            
+            previewQuestions();
+        }
+
+        // 保存题目
+        document.getElementById('questionForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const date = document.getElementById('currentEditDate').textContent;
+            if (!date) {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('currentEditDate').textContent = today;
+            }
+
+            const homework = {
+                article: document.getElementById('readingArticle').value,
+                readingQuestions: document.getElementById('readingQuestions').value,
+                basicQuestions: document.getElementById('basicQuestions').value,
+                answers: document.getElementById('answerContent').value,
+                lastModified: new Date().toISOString()
+            };
+
+            localStorage.setItem(date || today, JSON.stringify(homework));
+            alert('保存成功！');
+            loadTeacherDateNav();
+        });
+
+        // 解析内容
+        function parseContent(content) {
+            let article = '';
+            let readingQuestions = [];
+            let basicQuestions = [];
+            let answers = [];
+            
+            const lines = content.split('\n');
+            let currentSection = '';
+            let inReadingQuestions = false;
+            let inBasicQuestions = false;
+            let currentReadingQuestion = '';
+            let currentBasicQuestion = '';
+            
+            // 定义正则表达式
+            const articlePattern = /^[一二三四五六七八九十]/;
+            const readingTitlePattern = /阅读理解题目/;
+            const basicTitlePattern = /(基础部分|一、基础知识)/;
+            const answerSectionPattern = /(阅读理解答案|基础知识答案)/;
+            const readingQuestionPattern = /^题目\d+/;
+            const basicQuestionPattern = /^\d+\s*[\.\．][\(（](\d+)分[\)）]/;
+            
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+                
+                // 跳过题目：标记
+                if (line === '题目：') {
+                    continue;
+                }
+                
+                // 检测文章段落 (四、五、六等)
+                if (articlePattern.test(line) && !inReadingQuestions && !inBasicQuestions) {
+                    currentSection = 'article';
+                    article += line + '\n';
+                    continue;
+                }
+                
+                // 检测阅读理解题目部分
+                if (readingTitlePattern.test(line)) {
+                    currentSection = 'reading';
+                    inReadingQuestions = true;
+                    inBasicQuestions = false;
+                    continue;
+                }
+                
+                // 检测基础知识部分
+                if (basicTitlePattern.test(line)) {
+                    currentSection = 'basic';
+                    inBasicQuestions = true;
+                    inReadingQuestions = false;
+                    // 结束文章部分，确保基础知识部分不会被当作文章
+                    continue;
+                }
+                
+                // 检测答案部分
+                if (answerSectionPattern.test(line)) {
+                    // 保存最后一个阅读题目
+                    if (currentReadingQuestion) {
+                        readingQuestions.push(currentReadingQuestion.trim());
+                        currentReadingQuestion = '';
+                    }
+                    
+                    // 保存最后一个基础知识题目
+                    if (currentBasicQuestion) {
+                        basicQuestions.push(currentBasicQuestion.trim());
+                        currentBasicQuestion = '';
+                    }
+                    
+                    currentSection = 'answers';
+                    inReadingQuestions = false;
+                    inBasicQuestions = false;
+                    continue;
+                }
+                
+                // 处理各部分内容
+                switch (currentSection) {
+                    case 'article':
+                        article += line + '\n';
+                        break;
+                        
+                    case 'reading':
+                        if (inReadingQuestions) {
+                            // 新题目开始
+                            if (readingQuestionPattern.test(line)) {
+                                // 保存之前的题目
+                                if (currentReadingQuestion) {
+                                    readingQuestions.push(currentReadingQuestion.trim());
+                                }
+                                currentReadingQuestion = line;
+                            } else if (currentReadingQuestion) {
+                                // 继续收集当前题目
+                                currentReadingQuestion += '\n' + line;
+                            }
+                        }
+                        break;
+                        
+                    case 'basic':
+                        if (inBasicQuestions) {
+                            // 新的基础知识题目
+                            if (basicQuestionPattern.test(line)) {
+                                // 保存之前的题目
+                                if (currentBasicQuestion) {
+                                    basicQuestions.push(currentBasicQuestion.trim());
+                                }
+                                currentBasicQuestion = line;
+                            } else if (currentBasicQuestion) {
+                                // 继续收集当前题目
+                                currentBasicQuestion += '\n' + line;
+                            }
+                        }
+                        break;
+                        
+                    case 'answers':
+                        if (line.match(/^第\d+题[：:]/)) {
+                            answers.push(line);
+                        }
+                        break;
+                }
+            }
+            
+            // 保存最后收集的题目
+            if (currentReadingQuestion) {
+                readingQuestions.push(currentReadingQuestion.trim());
+            }
+            
+            if (currentBasicQuestion) {
+                basicQuestions.push(currentBasicQuestion.trim());
+            }
+            
+            console.log('解析结果：', {
+                article: article.trim().split('\n').length + '行',
+                readingQuestions: readingQuestions.length + '道题',
+                basicQuestions: basicQuestions.length + '道题',
+                answers: answers.length + '个答案'
+            });
+            
+            // 更新表单
+            document.getElementById('readingArticle').value = article.trim();
+            document.getElementById('readingQuestions').value = readingQuestions.join('\n');
+            document.getElementById('basicQuestions').value = basicQuestions.join('\n');
+            document.getElementById('answerContent').value = answers.join('\n');
+            
+            // 预览解析结果
+            previewQuestions();
+        }
+
+        // 生成预览HTML
+        function generatePreviewHtml(homework) {
+            let html = `
+                <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                    <!-- 试卷头部 -->
+                    <div class="border-b dark:border-gray-700 p-8">
+                        <h1 class="text-3xl font-bold text-center mb-4">语文作业</h1>
+                        <div class="text-gray-600 dark:text-gray-400 text-center">
+                            满分：100分&nbsp;&nbsp;&nbsp;时间：90分钟
+                        </div>
+                    </div>
+
+                    <!-- 试卷内容 -->
+                    <div class="p-8 space-y-8">
+            `;
+            
+            // 阅读理解部分
+            if (homework.article) {
+                html += `
+                    <section>
+                        <div class="text-xl font-bold mb-6">一、阅读理解（共60分）</div>
+                        <div class="mb-6">
+                            <div class="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg mb-6 whitespace-pre-wrap leading-relaxed text-base">${homework.article}</div>
+                            ${generateQuestionPreviewHtml(homework.readingQuestions, '阅读理解题', homework.answers)}
+                        </div>
+                    </section>
+                `;
+            }
+
+            // 基础知识部分
+            if (homework.basicQuestions) {
+                html += `
+                    <section>
+                        <div class="text-xl font-bold mb-6">二、基础知识（共40分）</div>
+                        ${generateQuestionPreviewHtml(homework.basicQuestions, '基础知识题', homework.answers)}
+                    </section>
+                `;
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        // 生成问题预览HTML（包含答案）
+        function generateQuestionPreviewHtml(questions, type, answers) {
+            if (!questions) return '';
+            
+            // 确保questions是字符串
+            if (typeof questions !== 'string') {
+                console.error('questions参数类型错误:', typeof questions);
+                return '';
+            }
+            
+            // 安全地分割问题
+            const questionLines = questions.split('\n').filter(q => q.trim());
+            if (questionLines.length === 0) return '';
+            
+            // 使用reduce将问题分组
+            const questionList = [];
+            let currentQuestion = [];
+            
+            questionLines.forEach(line => {
+                // 检测新题目的开始
+                if (line.match(/^\d+\.\(\d+分\)/) || line.startsWith('题目')) {
+                    if (currentQuestion.length > 0) {
+                        questionList.push(currentQuestion);
+                    }
+                    currentQuestion = [line];
+                } else {
+                    currentQuestion.push(line);
+                }
+            });
+            
+            // 添加最后一个问题
+            if (currentQuestion.length > 0) {
+                questionList.push(currentQuestion);
+            }
+
+            const answerList = answers ? answers.split('\n').filter(a => a.trim()) : [];
+            let html = '<div class="space-y-4">';
+            
+            // 计算答案的起始索引
+            const readingQuestionsCount = document.getElementById('readingQuestions').value.split('\n')
+                .filter(q => q.trim().startsWith('题目')).length;
+            let answerStartIndex = type === '基础知识题' ? readingQuestionsCount : 0;
+            
+            questionList.forEach((questionParts, index) => {
+                if (!questionParts || !questionParts.length) return;
+                
+                const answerIndex = type === '基础知识题' ? index + answerStartIndex : index;
+                const answer = answerList[answerIndex] || '';
+                
+                html += `
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="font-medium mb-2">${questionParts[0]}</div>
+                                    <div class="whitespace-pre-wrap">${questionParts.slice(1).join('\n')}</div>
+                                </div>
+                            </div>
+                            <div class="mt-2 pt-2 border-t">
+                                <div class="font-medium text-green-600 dark:text-green-400">答案：</div>
+                                <div class="whitespace-pre-wrap">${answer.replace(/^第\d+题[：:]/,'')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        // 预览问题
+        function previewQuestions() {
+            const homework = {
+                article: document.getElementById('readingArticle').value,
+                readingQuestions: document.getElementById('readingQuestions').value,
+                basicQuestions: document.getElementById('basicQuestions').value,
+                answers: document.getElementById('answerContent').value
+            };
+
+            // 检查是否有内容需要预览
+            if (!homework.article && !homework.readingQuestions && !homework.basicQuestions && !homework.answers) {
+                document.getElementById('detectedQuestions').classList.add('hidden');
+                return;
+            }
+
+            const previewHtml = generatePreviewHtml(homework);
+            document.getElementById('questionsList').innerHTML = previewHtml;
+            document.getElementById('detectedQuestions').classList.remove('hidden');
+        }
+
+        // 添加实时预览功能
+        const previewInputs = [
+            'readingArticle',
+            'readingQuestions',
+            'basicQuestions',
+            'answerContent'
+        ];
+
+        previewInputs.forEach(inputId => {
+            const element = document.getElementById(inputId);
+            if (element) {
+                element.addEventListener('input', () => {
+                    clearTimeout(element.debounceTimer);
+                    element.debounceTimer = setTimeout(previewQuestions, 500);
+                });
+            }
+        });
+
+        // 确保预览按钮点击事件正确绑定
+        document.addEventListener('DOMContentLoaded', () => {
+            const previewButton = document.querySelector('button[onclick="previewQuestions()"]');
+            if (previewButton) {
+                previewButton.onclick = previewQuestions;
+            }
+        });
+
+        // 生成作业HTML
+        function generateHomeworkHtml(homework, date) {
+            let html = '';
+            
+            // 阅读理解部分
+            if (homework.article) {
+                html += `
+                    <div class="mb-8">
+                        <h3 class="text-lg font-bold mb-4">阅读理解</h3>
+                        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded mb-4 whitespace-pre-wrap">${homework.article}</div>
+                        ${generateStudentQuestionHtml(homework.readingQuestions, '阅读理解题', date)}
+                    </div>
+                `;
+            }
+
+            // 基础知识部分
+            if (homework.basicQuestions) {
+                html += `
+                    <div>
+                        <h3 class="text-lg font-bold mb-4">基础知识</h3>
+                        ${generateStudentQuestionHtml(homework.basicQuestions, '基础知识题', date)}
+                    </div>
+                `;
+            }
+
+            // 添加提交按钮
+            html += `
+                <div class="mt-8">
+                    <button onclick="submitHomework('${date}')" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        提交作业
+                    </button>
+                </div>
+            `;
+
+            return html;
+        }
+
+        // 更新生成学生作业HTML的函数
+        function generateStudentQuestionHtml(questions, type, date) {
+            if (!questions) return '';
+            
+            // 确保questions是字符串
+            if (typeof questions !== 'string') {
+                console.error('questions参数类型错误:', typeof questions);
+                return '';
+            }
+            
+            // 安全地分割问题
+            const questionLines = questions.split('\n').filter(q => q.trim());
+            if (questionLines.length === 0) return '';
+            
+            // 使用更安全的方法将问题分组
+            const questionList = [];
+            let currentQuestion = [];
+            
+            questionLines.forEach(line => {
+                // 检测新题目的开始
+                if (line.match(/^\d+\.\(\d+分\)/) || line.startsWith('题目')) {
+                    if (currentQuestion.length > 0) {
+                        questionList.push(currentQuestion);
+                    }
+                    currentQuestion = [line];
+                } else {
+                    currentQuestion.push(line);
+                }
+            });
+            
+            // 添加最后一个问题
+            if (currentQuestion.length > 0) {
+                questionList.push(currentQuestion);
+            }
+
+            const username = localStorage.getItem('username');
+            const answers = JSON.parse(localStorage.getItem(`${date}_${username}_answers`) || '{}');
+            const results = JSON.parse(localStorage.getItem(`${date}_${username}_results`) || '{}');
+            const correctAnswers = JSON.parse(localStorage.getItem(`${date}_correct_answers`) || '{}');
+            let html = '<div class="space-y-4">';
+            
+            questionList.forEach((questionParts, index) => {
+                if (!questionParts || !questionParts.length) return;
+                
+                const questionId = `${type}_${index}`;
+                const isCorrect = results[questionId];
+                const resultClass = isCorrect === undefined ? '' : 
+                                  isCorrect ? 'border-green-500' : 'border-red-500';
+                
+                let questionHtml = `
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded shadow">
+                        <div class="space-y-4">
+                            <div>
+                                <div class="font-medium mb-2">${questionParts[0]}</div>
+                                <div class="whitespace-pre-wrap mb-4">${questionParts.slice(1).join('\n')}</div>
+                            </div>
+                `;
+                
+                // 检查是否有选项 (A.B.C.D或A、B、C、D格式)
+                const options = [];
+                const hasOptions = questionParts.some(line => /^[A-D][\.\、]/.test(line));
+                
+                if (hasOptions) {
+                    // 选择题
+                    questionHtml += `<div class="mt-4 space-y-2">`;
+                    
+                    // 找出选项
+                    questionParts.forEach(line => {
+                        if (/^[A-D][\.\、]/.test(line)) {
+                            const optionLetter = line.charAt(0);
+                            options.push(optionLetter);
+                            const isSelected = answers[questionId] === optionLetter;
+                            const disabled = false; // 移除禁用状态，允许修改
+                            const optionClass = isCorrect !== undefined ? (
+                                optionLetter === correctAnswers[questionId] ? 'bg-green-100 dark:bg-green-900' : 
+                                isSelected ? 'bg-red-100 dark:bg-red-900' : ''
+                            ) : '';
+                            
+                            questionHtml += `
+                                <div class="flex items-center ${optionClass} p-2 rounded">
+                                    <input type="radio" id="${questionId}_${optionLetter}" 
+                                           name="${questionId}" value="${optionLetter}" 
+                                           ${isSelected ? 'checked' : ''}
+                                           ${disabled ? 'disabled' : ''}
+                                           onchange="saveAnswer('${date}', '${questionId}', '${optionLetter}')">
+                                    <label for="${questionId}_${optionLetter}" class="ml-2 flex-1">${line}</label>
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    questionHtml += `</div>`;
+                } else {
+                    // 查找填空点数量（下划线或连续空格）
+                    const underscoreMatches = questionParts.join('\n').match(/_{3,}|\.{3,}|\s{3,}/g);
+                    const blankCount = underscoreMatches ? underscoreMatches.length : 0;
+                    
+                    // 多个填空点则使用多个输入框
+                    if (blankCount > 1) {
+                        questionHtml += `<div class="space-y-2">`;
+                        for (let i = 1; i <= blankCount; i++) {
+                            const subQuestionId = `${questionId}_${i}`;
+                            const subAnswer = answers[subQuestionId] || '';
+                            const subIsCorrect = results[subQuestionId];
+                            const subResultClass = subIsCorrect === undefined ? '' : 
+                                                subIsCorrect ? 'border-green-500' : 'border-red-500';
+                            
+                            questionHtml += `
+                                <div class="flex items-center">
+                                    <span class="mr-2">${i}.</span>
+                                    <input type="text" 
+                                           class="flex-1 p-2 border rounded dark:bg-gray-700 ${subResultClass}"
+                                           placeholder="请输入答案..."
+                                           value="${subAnswer}"
+                                           onchange="saveAnswer('${date}', '${subQuestionId}', this.value)">
+                                </div>
+                            `;
+                            
+                            // 如果已提交且答案错误，显示正确答案
+                            if (results[subQuestionId] === false && correctAnswers[subQuestionId]) {
+                                questionHtml += `
+                                    <div class="ml-6 text-sm">
+                                        <span class="text-red-500">答案不正确。</span>
+                                        <span class="text-green-500">正确答案: ${correctAnswers[subQuestionId]}</span>
+                                    </div>
+                                `;
+                            }
+                        }
+                        questionHtml += `</div>`;
+                    } else {
+                        // 单个填空，使用文本框
+                        questionHtml += `
+                            <div>
+                                <textarea
+                                    class="w-full p-2 border rounded dark:bg-gray-700 ${resultClass}"
+                                    rows="2"
+                                    placeholder="请输入你的答案..."
+                                    onchange="saveAnswer('${date}', '${questionId}', this.value)"
+                                >${answers[questionId] || ''}</textarea>
+                            </div>
+                        `;
+                        
+                        // 如果已提交且答案错误，显示正确答案
+                        if (isCorrect === false && correctAnswers[questionId]) {
+                            questionHtml += `
+                                <div class="mt-2">
+                                    <span class="text-red-500">答案不正确。</span>
+                                    <span class="text-green-500">正确答案: ${correctAnswers[questionId]}</span>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+                
+                questionHtml += `
+                        </div>
+                    </div>
+                `;
+                
+                html += questionHtml;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        // 提交作业
+        function submitHomework(date) {
+            const homework = JSON.parse(localStorage.getItem(date) || '{}');
+            const username = localStorage.getItem('username');
+            const answers = JSON.parse(localStorage.getItem(`${date}_${username}_answers`) || '{}');
+            const correctAnswers = homework.answers ? homework.answers.split('\n').filter(a => a.trim()) : [];
+            let results = {};
+            let correctAnswersMap = {};
+            let score = 0;
+            let totalQuestions = 0;
+            let answeredQuestions = 0;
+
+            // 检查阅读理解题数量
+            const readingQuestionsCount = homework.readingQuestions ? 
+                homework.readingQuestions.split('\n').filter(q => q.trim().startsWith('题目')).length : 0;
+
+            // 从答案中提取正确选项
+            correctAnswers.forEach((answer, index) => {
+                // 去除"第X题："前缀
+                const cleanAnswer = answer.replace(/^第\d+题[：:]\s*/, '').trim();
+                
+                // 选择题答案特殊处理
+                if (/^[A-D]$/i.test(cleanAnswer)) {
+                    correctAnswersMap[`${index < readingQuestionsCount ? '阅读理解题' : '基础知识题'}_${index < readingQuestionsCount ? index : index - readingQuestionsCount}`] = cleanAnswer.toUpperCase();
+                } else {
+                    correctAnswersMap[`${index < readingQuestionsCount ? '阅读理解题' : '基础知识题'}_${index < readingQuestionsCount ? index : index - readingQuestionsCount}`] = cleanAnswer;
+                }
+            });
+            
+            if (homework.readingQuestions) {
+                const readingQuestions = homework.readingQuestions.split('\n').filter(q => q.trim());
+                
+                // 分组阅读理解题目
+                const groupedQuestions = [];
+                let currentGroup = [];
+                readingQuestions.forEach(line => {
+                    if (line.startsWith('题目')) {
+                        if (currentGroup.length > 0) {
+                            groupedQuestions.push(currentGroup);
+                        }
+                        currentGroup = [line];
+                    } else if (currentGroup.length > 0) {
+                        currentGroup.push(line);
+                    }
+                });
+                if (currentGroup.length > 0) {
+                    groupedQuestions.push(currentGroup);
+                }
+                
+                groupedQuestions.forEach((questionGroup, index) => {
+                    const questionId = `阅读理解题_${index}`;
+                    
+                    // 检查是否有下划线表示多个填空
+                    const fullQuestion = questionGroup.join(' ');
+                    const underscoreMatches = fullQuestion.match(/_{3,}|\.{3,}|\s{3,}/g);
+                    const blankCount = underscoreMatches ? underscoreMatches.length : 0;
+                    
+                    if (blankCount > 1) {
+                        // 多填空题处理
+                        let correctCount = 0;
+                        for (let i = 1; i <= blankCount; i++) {
+                            const subQuestionId = `${questionId}_${i}`;
+                            const studentAnswer = answers[subQuestionId] || '';
+                            const correctAnswer = correctAnswersMap[questionId + (i === 1 ? '' : `_${i}`)] || 
+                                                 correctAnswersMap[questionId];
+                            
+                            if (studentAnswer) {
+                                answeredQuestions++;
+                                results[subQuestionId] = checkAnswer(studentAnswer, correctAnswer);
+                                if (results[subQuestionId]) correctCount++;
+                                correctAnswersMap[subQuestionId] = correctAnswer;
+                            } else {
+                                results[subQuestionId] = false;
+                            }
+                        }
+                        
+                        // 所有填空都正确才算整题正确
+                        results[questionId] = (correctCount === blankCount);
+                        if (results[questionId]) score++;
+                        
+                    } else {
+                        // 单一填空或选择题处理
+                        const studentAnswer = answers[questionId];
+                        const correctAnswer = correctAnswersMap[questionId];
+                        
+                        if (studentAnswer) {
+                            answeredQuestions++;
+                            results[questionId] = checkAnswer(studentAnswer, correctAnswer);
+                            if (results[questionId]) score++;
+                        } else {
+                            results[questionId] = false;
+                        }
+                        
+                        correctAnswersMap[questionId] = correctAnswer;
+                    }
+                    
+                    totalQuestions++;
+                });
+            }
+
+            // 检查基础知识题
+            if (homework.basicQuestions) {
+                const basicQuestions = homework.basicQuestions.split('\n').filter(q => q.trim());
+                
+                // 分组基础知识题目
+                const groupedQuestions = [];
+                let currentGroup = [];
+                basicQuestions.forEach(line => {
+                    if (line.match(/^\d+\.\(\d+分\)/)) {
+                        if (currentGroup.length > 0) {
+                            groupedQuestions.push(currentGroup);
+                        }
+                        currentGroup = [line];
+                    } else if (currentGroup.length > 0) {
+                        currentGroup.push(line);
+                    }
+                });
+                if (currentGroup.length > 0) {
+                    groupedQuestions.push(currentGroup);
+                }
+                
+                groupedQuestions.forEach((questionGroup, index) => {
+                    const questionId = `基础知识题_${index}`;
+                    
+                    // 检查是否为选择题
+                    const hasOptions = questionGroup.some(line => /^[A-D][\.\、]/.test(line));
+                    
+                    if (hasOptions) {
+                        // 选择题处理
+                        const studentAnswer = answers[questionId];
+                        const correctAnswer = correctAnswersMap[questionId];
+                        
+                        if (studentAnswer) {
+                            answeredQuestions++;
+                            results[questionId] = (studentAnswer.toUpperCase() === correctAnswer.toUpperCase());
+                            if (results[questionId]) score++;
+                        } else {
+                            results[questionId] = false;
+                        }
+                        
+                        correctAnswersMap[questionId] = correctAnswer;
+                    } else {
+                        // 普通填空题处理
+                        const fullQuestion = questionGroup.join(' ');
+                        const underscoreMatches = fullQuestion.match(/_{3,}|\.{3,}|\s{3,}/g);
+                        const blankCount = underscoreMatches ? underscoreMatches.length : 0;
+                        
+                        if (blankCount > 1) {
+                            // 多填空题处理
+                            let correctCount = 0;
+                            for (let i = 1; i <= blankCount; i++) {
+                                const subQuestionId = `${questionId}_${i}`;
+                                const studentAnswer = answers[subQuestionId] || '';
+                                const correctAnswer = correctAnswersMap[questionId + (i === 1 ? '' : `_${i}`)] || 
+                                                     correctAnswersMap[questionId];
+                                
+                                if (studentAnswer) {
+                                    answeredQuestions++;
+                                    results[subQuestionId] = checkAnswer(studentAnswer, correctAnswer);
+                                    if (results[subQuestionId]) correctCount++;
+                                    correctAnswersMap[subQuestionId] = correctAnswer;
+                                } else {
+                                    results[subQuestionId] = false;
+                                }
+                            }
+                            
+                            // 所有填空都正确才算整题正确
+                            results[questionId] = (correctCount === blankCount);
+                            if (results[questionId]) score++;
+                        } else {
+                            // 单一填空处理
+                            const studentAnswer = answers[questionId];
+                            const correctAnswer = correctAnswersMap[questionId];
+                            
+                            if (studentAnswer) {
+                                answeredQuestions++;
+                                results[questionId] = checkAnswer(studentAnswer, correctAnswer);
+                                if (results[questionId]) score++;
+                            } else {
+                                results[questionId] = false;
+                            }
+                            
+                            correctAnswersMap[questionId] = correctAnswer;
+                        }
+                    }
+                    
+                    totalQuestions++;
+                });
+            }
+
+            // 保存结果和正确答案
+            localStorage.setItem(`${date}_${username}_results`, JSON.stringify(results));
+            localStorage.setItem(`${date}_correct_answers`, JSON.stringify(correctAnswersMap));
+            
+            // 显示结果
+            const percentage = Math.round((score / totalQuestions) * 100);
+            alert(`作业已提交！\n答题数：${answeredQuestions}/${totalQuestions}\n得分：${score}/${totalQuestions}\n正确率：${percentage}%`);
+            
+            // 刷新显示
+            loadHomework(date);
+        }
+
+        // 保存答案
+        function saveAnswer(date, questionId, value) {
+            const username = localStorage.getItem('username');
+            const key = `${date}_${username}_answers`;
+            const answers = JSON.parse(localStorage.getItem(key) || '{}');
+            answers[questionId] = value;
+            localStorage.setItem(key, JSON.stringify(answers));
+        }
+
+        // 检查答案
+        function checkAnswer(studentAnswer, correctAnswer) {
+            // 标准化答案
+            studentAnswer = normalizeAnswer(studentAnswer);
+            correctAnswer = normalizeAnswer(correctAnswer);
+            
+            return studentAnswer === correctAnswer;
+        }
+
+        // 标准化答案
+        function normalizeAnswer(answer) {
+            if (!answer) return '';
+            
+            // 移除"第X题："格式
+            answer = answer.replace(/^第\d+题[：:]\s*/, '');
+            
+            return answer
+                .toLowerCase()
+                .replace(/[，,。.！!？?]/g, '')
+                .replace(/\s+/g, '')
+                .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\.?/, '')
+                .replace(/^[0-9]+\./, '')
+                .replace(/^[a-z][\.:：]/, '');
+        }
+
+        // 文件上传处理
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    parseContent(content);
+                };
+                reader.readAsText(file);
+            }
+        }
+    </script>
+</body>
+</html>
